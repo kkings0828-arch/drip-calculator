@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>V60 Neo 02 드립커피 레시피 계산기</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #FAF7F2;
+      color: #2C221E;
+    }
+    input[type="range"] {
+      accent-color: #8B4513;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    @keyframes pulse-soft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    .animate-pulse-soft {
+      animation: pulse-soft 1.6s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+  <div class="max-w-3xl mx-auto px-4 py-5 sm:px-6 sm:py-8">
+    <!-- Header -->
+    <header class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-900/10 text-amber-900 text-xs font-semibold mb-1.5">
+          <span>V60 Neo 02</span>
+          <span>·</span>
+          <span>리큅 LCG-C2400</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">드립커피 레시피 계산기</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="copyBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-xs sm:text-sm font-medium shadow-sm hover:bg-stone-50 active:scale-[0.99] transition">
+          <svg class="w-4 h-4 text-amber-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>레시피 복사</span>
+        </button>
+        <button id="resetBtn" type="button" class="px-3 py-2 rounded-xl bg-stone-200/70 text-stone-700 text-xs sm:text-sm font-medium hover:bg-stone-200 active:scale-[0.99] transition">
+          초기화
+        </button>
+      </div>
+    </header>
+
+    <!-- Summary KPI Cards -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div class="bg-white rounded-2xl p-3.5 border border-stone-200/80 shadow-sm">
+        <div class="text-xs font-medium text-stone-500 mb-1">원두량</div>
+        <div class="text-xl sm:text-2xl font-bold text-stone-900 tabular-nums"><span id="kpiDose">20</span><span class="text-sm font-medium text-stone-500 ml-0.5">g</span></div>
+      </div>
+      <div class="bg-white rounded-2xl p-3.5 border border-stone-200/80 shadow-sm">
+        <div class="text-xs font-medium text-stone-500 mb-1">총 물 양 (<span id="kpiRatioLabel">1:14</span>)</div>
+        <div class="text-xl sm:text-2xl font-bold text-amber-900 tabular-nums"><span id="kpiWater">280</span><span class="text-sm font-medium text-amber-700/80 ml-0.5">g</span></div>
+      </div>
+      <div class="bg-white rounded-2xl p-3.5 border border-stone-200/80 shadow-sm">
+        <div class="text-xs font-medium text-stone-500 mb-1">추천 분쇄도</div>
+        <div class="text-xl sm:text-2xl font-bold text-stone-900 tabular-nums"><span id="kpiGrind">35~38</span><span class="text-sm font-medium text-stone-500 ml-0.5">단</span></div>
+      </div>
+      <div class="bg-white rounded-2xl p-3.5 border border-stone-200/80 shadow-sm">
+        <div class="text-xs font-medium text-stone-500 mb-1">추천 물 온도</div>
+        <div class="text-xl sm:text-2xl font-bold text-stone-900 tabular-nums"><span id="kpiTemp">91~93</span><span class="text-sm font-medium text-stone-500 ml-0.5">°C</span></div>
+      </div>
+    </section>
+
+    <!-- Main Controls -->
+    <section class="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200/80 shadow-sm mb-5 space-y-5">
+      <!-- Quick Dose Presets & Mode -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs font-semibold text-stone-500 mr-1">기준 프리셋:</span>
+          <button type="button" data-preset="15" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold border transition">15g (210g)</button>
+          <button type="button" data-preset="20" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold border transition">20g (280g)</button>
+          <button type="button" data-preset="22" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold border transition">22g (308g)</button>
+        </div>
+        <div class="inline-flex rounded-xl bg-stone-100 p-1 text-xs font-medium">
+          <button type="button" id="modeDoseBtn" class="px-2.5 py-1 rounded-lg transition">원두량 기준</button>
+          <button type="button" id="modeWaterBtn" class="px-2.5 py-1 rounded-lg transition">물 양 기준</button>
+        </div>
+      </div>
+
+      <!-- Dose & Water Inputs -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div id="doseControlWrap" class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70">
+          <div class="flex items-center justify-between mb-2">
+            <label for="doseInput" class="text-sm font-semibold text-stone-800">원두량 (g)</label>
+            <div class="flex items-center gap-1.5">
+              <button type="button" id="doseMinus" class="w-7 h-7 rounded-lg bg-white border border-stone-200 text-stone-700 font-bold hover:bg-stone-100">-</button>
+              <input id="doseInput" type="number" min="8" max="40" step="0.5" value="20" class="w-16 text-center py-1 rounded-lg bg-white border border-stone-300 text-sm font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-700/30" />
+              <button type="button" id="dosePlus" class="w-7 h-7 rounded-lg bg-white border border-stone-200 text-stone-700 font-bold hover:bg-stone-100">+</button>
+            </div>
+          </div>
+          <input id="doseRange" type="range" min="10" max="35" step="0.5" value="20" class="w-full cursor-pointer" />
+          <div class="flex justify-between text-[11px] text-stone-400 mt-1 tabular-nums">
+            <span>10g</span>
+            <span>20g</span>
+            <span>35g</span>
+          </div>
+        </div>
+
+        <div id="waterControlWrap" class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70">
+          <div class="flex items-center justify-between mb-2">
+            <label for="waterInput" class="text-sm font-semibold text-stone-800">목표 총 물 양 (g)</label>
+            <div class="flex items-center gap-1.5">
+              <button type="button" id="waterMinus" class="w-7 h-7 rounded-lg bg-white border border-stone-200 text-stone-700 font-bold hover:bg-stone-100">-</button>
+              <input id="waterInput" type="number" min="100" max="600" step="5" value="280" class="w-16 text-center py-1 rounded-lg bg-white border border-stone-300 text-sm font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-700/30" />
+              <button type="button" id="waterPlus" class="w-7 h-7 rounded-lg bg-white border border-stone-200 text-stone-700 font-bold hover:bg-stone-100">+</button>
+            </div>
+          </div>
+          <input id="waterRange" type="range" min="140" max="500" step="5" value="280" class="w-full cursor-pointer" />
+          <div class="flex justify-between text-[11px] text-stone-400 mt-1 tabular-nums">
+            <span>140g</span>
+            <span>280g</span>
+            <span>500g</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ratio, Roast, Pour Split -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+        <!-- Extraction Ratio -->
+        <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-semibold text-stone-800">추출 비율</span>
+            <span id="ratioDisplay" class="text-sm font-bold text-amber-900 tabular-nums">1 : 14.0</span>
+          </div>
+          <input id="ratioRange" type="range" min="12" max="17" step="0.5" value="14" class="w-full cursor-pointer" />
+          <div class="flex justify-between text-[11px] text-stone-400 mt-1 tabular-nums">
+            <span>1:12 (진함)</span>
+            <span>1:14 (기본)</span>
+            <span>1:17 (연함)</span>
+          </div>
+        </div>
+
+        <!-- Roast & Fine Tune -->
+        <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-semibold text-stone-800">배전도 & 분쇄 보정</span>
+            <span id="grindOffsetDisplay" class="text-xs font-bold text-amber-900 tabular-nums">기본 (0단)</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 mb-2">
+            <button type="button" data-roast="light" class="roast-btn py-1.5 rounded-lg text-xs font-semibold border transition">약배전</button>
+            <button type="button" data-roast="medium" class="roast-btn py-1.5 rounded-lg text-xs font-semibold border transition">중배전</button>
+            <button type="button" data-roast="dark" class="roast-btn py-1.5 rounded-lg text-xs font-semibold border transition">강배전</button>
+          </div>
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <span class="text-stone-500">미세 조절 (±2단):</span>
+            <div class="flex items-center gap-1">
+              <button type="button" id="grindMinus" class="px-2 py-0.5 rounded bg-white border border-stone-200 font-bold hover:bg-stone-100">-</button>
+              <span id="manualOffsetVal" class="w-8 text-center font-semibold tabular-nums">0</span>
+              <button type="button" id="grindPlus" class="px-2 py-0.5 rounded bg-white border border-stone-200 font-bold hover:bg-stone-100">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pour Strategy -->
+        <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70 flex flex-col justify-between">
+          <div>
+            <div class="text-sm font-semibold text-stone-800 mb-2">추출 분할 방식</div>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button type="button" data-split="2" class="split-btn py-1.5 px-2 rounded-lg text-xs font-semibold border transition">2차 분할 (기본)</button>
+              <button type="button" data-split="3" class="split-btn py-1.5 px-2 rounded-lg text-xs font-semibold border transition">3차 분할</button>
+            </div>
+          </div>
+          <div class="mt-2.5 flex items-center justify-between text-xs text-stone-500">
+            <span>뜸들이기 비율:</span>
+            <div class="flex items-center gap-1">
+              <button type="button" data-bloom="2" class="bloom-btn px-2 py-0.5 rounded border text-[11px] font-semibold transition">2배</button>
+              <button type="button" data-bloom="2.5" class="bloom-btn px-2 py-0.5 rounded border text-[11px] font-semibold transition">2.5배</button>
+              <button type="button" data-bloom="3" class="bloom-btn px-2 py-0.5 rounded border text-[11px] font-semibold transition">3배</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Extraction Timer & Steps -->
+    <section class="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200/80 shadow-sm mb-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-stone-100">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-stone-900">단계별 추출 가이드 & 타이머</h2>
+          <p id="timerStepHint" class="text-xs text-stone-500 mt-0.5">시작 버튼을 누르면 각 푸어 시점에 맞춰 안내합니다.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="px-3.5 py-2 rounded-xl bg-stone-900 text-white font-bold text-lg sm:text-xl tabular-nums tracking-wide" id="timerDisplay">00:00</div>
+          <button type="button" id="timerStartBtn" class="px-3.5 py-2.5 rounded-xl bg-amber-800 text-white text-xs sm:text-sm font-semibold hover:bg-amber-900 active:scale-[0.99] transition">시작</button>
+          <button type="button" id="timerResetBtn" class="px-3 py-2.5 rounded-xl bg-stone-100 text-stone-700 text-xs sm:text-sm font-semibold hover:bg-stone-200 active:scale-[0.99] transition">리셋</button>
+          <button type="button" id="soundToggleBtn" title="알림음 켜기/끄기" class="p-2.5 rounded-xl bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
+            <svg id="soundOnIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg id="soundOffIcon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Visual Pour Distribution Bar -->
+      <div class="mb-4">
+        <div class="flex justify-between text-[11px] font-medium text-stone-500 mb-1.5">
+          <span>물 분배 비율</span>
+          <span id="pourSummaryText" class="tabular-nums text-stone-700"></span>
+        </div>
+        <div id="pourBar" class="w-full h-3 rounded-full overflow-hidden flex bg-stone-100"></div>
+      </div>
+
+      <!-- Step Cards -->
+      <div id="stepsContainer" class="space-y-2.5"></div>
+    </section>
+
+    <!-- Practical Notes -->
+    <section class="bg-amber-950/[0.04] rounded-2xl p-4 border border-amber-900/10 text-xs text-stone-600 space-y-1.5">
+      <div class="font-semibold text-stone-800">추출 보정 팁 (LCG-C2400 기준 31~40단계)</div>
+      <p>• 추출이 너무 빠르고 신맛·가벼움이 강하면 분쇄도를 <strong class="text-stone-800">가늘게(단수 낮추기)</strong> 조절하세요.</p>
+      <p>• 물 빠짐이 느리고 쓴맛·떫은맛이 나면 분쇄도를 <strong class="text-stone-800">굵게(단수 높이기)</strong> 조절하세요.</p>
+      <p>• 로스팅 직후 원두는 가스가 많아 뜸들이기 시간을 35~40초로 늘리거나 물 양을 2.5배로 설정하면 안정적입니다.</p>
+    </section>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl bg-stone-900 text-white text-xs sm:text-sm font-medium shadow-lg opacity-0 pointer-events-none transition-opacity duration-200 z-50"></div>
+
+  <script>
+    const state = {
+      mode: 'dose', // 'dose' | 'water'
+      dose: 20,
+      water: 280,
+      ratio: 14,
+      roast: 'medium', // 'light' | 'medium' | 'dark'
+      manualGrindOffset: 0, // -2 ~ +2
+      splitCount: 2, // 2 | 3
+      bloomMultiplier: 2, // 2 | 2.5 | 3
+      soundEnabled: true,
+      timerRunning: false,
+      elapsedSec: 0,
+      timerInterval: null,
+      lastCueStepIndex: -1
+    };
+
+    const ROAST_META = {
+      light: { label: '약배전', grindShift: -1, temp: '93~95' },
+      medium: { label: '중배전', grindShift: 0, temp: '91~93' },
+      dark: { label: '강배전', grindShift: 1, temp: '88~90' }
+    };
+
+    let audioCtx = null;
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('opacity-0');
+      el.classList.add('opacity-100');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => {
+        el.classList.remove('opacity-100');
+        el.classList.add('opacity-0');
+      }, 2200);
+    }
+
+    function playChime() {
+      if (!state.soundEnabled) return;
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(660, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.36);
+      } catch (e) {
+        // Ignore audio errors
+      }
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function getBaseGrindRange(dose) {
+      if (dose <= 17) return [33, 36];
+      if (dose <= 21) return [35, 38];
+      return [36, 40];
+    }
+
+    function getRecommendedGrind() {
+      const [baseMin, baseMax] = getBaseGrindRange(state.dose);
+      const shift = ROAST_META[state.roast].grindShift + state.manualGrindOffset;
+      const min = Math.max(31, Math.min(40, baseMin + shift));
+      const max = Math.max(31, Math.min(40, baseMax + shift));
+      return { min, max, shift };
+    }
+
+    function buildSteps() {
+      const totalWater = Math.round(state.water);
+      const bloomWater = Math.min(totalWater, Math.round(state.dose * state.bloomMultiplier));
+      const remaining = Math.max(0, totalWater - bloomWater);
+
+      const steps = [
+        {
+          id: 'bloom',
+          title: '뜸들이기 (Blooming)',
+          startSec: 0,
+          endSec: 30,
+          pour: bloomWater,
+          cumulative: bloomWater,
+          desc: `원두 전체가 고르게 젖도록 ${bloomWater}g을 천천히 붓고 30초간 뜸을 들입니다.`,
+          color: 'bg-amber-400'
+        }
+      ];
+
+      if (state.splitCount === 2) {
+        const p1 = Math.round(remaining / 2);
+        const p2 = remaining - p1;
+        steps.push({
+          id: 'pour1',
+          title: '1차 추출',
+          startSec: 30,
+          endSec: 60,
+          pour: p1,
+          cumulative: bloomWater + p1,
+          desc: `센터링을 유지하며 ${p1}g을 추가로 부어주세요. (1분 00초까지)`,
+          color: 'bg-amber-600'
+        });
+        steps.push({
+          id: 'pour2',
+          title: '2차 추출',
+          startSec: 60,
+          endSec: 115,
+          pour: p2,
+          cumulative: totalWater,
+          desc: `수위가 살짝 내려앉으면 나머지 ${p2}g을 부어 총 ${totalWater}g을 채웁니다.`,
+          color: 'bg-amber-800'
+        });
+      } else {
+        const p1 = Math.round(remaining / 3);
+        const p2 = Math.round(remaining / 3);
+        const p3 = remaining - p1 - p2;
+        steps.push({
+          id: 'pour1',
+          title: '1차 추출',
+          startSec: 30,
+          endSec: 60,
+          pour: p1,
+          cumulative: bloomWater + p1,
+          desc: `안정적인 센터링으로 ${p1}g을 부어줍니다. (1분 00초까지)`,
+          color: 'bg-amber-500'
+        });
+        steps.push({
+          id: 'pour2',
+          title: '2차 추출',
+          startSec: 60,
+          endSec: 90,
+          pour: p2,
+          cumulative: bloomWater + p1 + p2,
+          desc: `물 빠짐에 맞춰 ${p2}g을 추가로 부어줍니다. (1분 30초까지)`,
+          color: 'bg-amber-700'
+        });
+        steps.push({
+          id: 'pour3',
+          title: '3차 추출',
+          startSec: 90,
+          endSec: 125,
+          pour: p3,
+          cumulative: totalWater,
+          desc: `남은 ${p3}g을 천천히 부어 목표 수량(${totalWater}g)을 완성합니다.`,
+          color: 'bg-amber-900'
+        });
+      }
+
+      const lastEnd = steps[steps.length - 1].endSec;
+      steps.push({
+        id: 'finish',
+        title: '드립 완료 및 서빙',
+        startSec: lastEnd,
+        endSec: lastEnd + 20,
+        pour: 0,
+        cumulative: totalWater,
+        desc: '물이 완전히 내려간 뒤 드리퍼를 제거하고 서버를 가볍게 흔들어 잔에 따라냅니다.',
+        color: 'bg-stone-400'
+      });
+
+      return steps;
+    }
+
+    function syncDerivedValues() {
+      if (state.mode === 'dose') {
+        state.water = Math.round(state.dose * state.ratio);
+      } else {
+        state.dose = Math.round((state.water / state.ratio) * 2) / 2;
+      }
+    }
+
+    function render() {
+      const doseFormatted = Number.isInteger(state.dose) ? String(state.dose) : state.dose.toFixed(1);
+      const waterFormatted = String(Math.round(state.water));
+      const ratioFormatted = Number.isInteger(state.ratio) ? String(state.ratio) : state.ratio.toFixed(1);
+
+      document.getElementById('kpiDose').textContent = doseFormatted;
+      document.getElementById('kpiWater').textContent = waterFormatted;
+      document.getElementById('kpiRatioLabel').textContent = `1:${ratioFormatted}`;
+      document.getElementById('ratioDisplay').textContent = `1 : ${state.ratio.toFixed(1)}`;
+
+      const grind = getRecommendedGrind();
+      document.getElementById('kpiGrind').textContent = grind.min === grind.max ? `${grind.min}` : `${grind.min}~${grind.max}`;
+      document.getElementById('kpiTemp').textContent = ROAST_META[state.roast].temp;
+
+      const shiftLabel = grind.shift === 0 ? '기본 (0단)' : (grind.shift > 0 ? `+${grind.shift}단 (굵게)` : `${grind.shift}단 (가늘게)`);
+      document.getElementById('grindOffsetDisplay').textContent = `${ROAST_META[state.roast].label} · ${shiftLabel}`;
+      document.getElementById('manualOffsetVal').textContent = state.manualGrindOffset > 0 ? `+${state.manualGrindOffset}` : String(state.manualGrindOffset);
+
+      // Sync inputs without clobbering active focus
+      const doseInput = document.getElementById('doseInput');
+      const waterInput = document.getElementById('waterInput');
+      if (document.activeElement !== doseInput) doseInput.value = state.dose;
+      if (document.activeElement !== waterInput) waterInput.value = Math.round(state.water);
+      document.getElementById('doseRange').value = Math.min(35, Math.max(10, state.dose));
+      document.getElementById('waterRange').value = Math.min(500, Math.max(140, Math.round(state.water)));
+      document.getElementById('ratioRange').value = state.ratio;
+
+      // Mode buttons & wrap styling
+      const modeDoseBtn = document.getElementById('modeDoseBtn');
+      const modeWaterBtn = document.getElementById('modeWaterBtn');
+      const doseWrap = document.getElementById('doseControlWrap');
+      const waterWrap = document.getElementById('waterControlWrap');
+
+      if (state.mode === 'dose') {
+        modeDoseBtn.className = 'px-2.5 py-1 rounded-lg bg-white text-stone-900 shadow-sm font-semibold transition';
+        modeWaterBtn.className = 'px-2.5 py-1 rounded-lg text-stone-500 hover:text-stone-800 transition';
+        doseWrap.className = 'p-3.5 rounded-xl bg-amber-50/60 border border-amber-800/30';
+        waterWrap.className = 'p-3.5 rounded-xl bg-stone-50 border border-stone-200/70';
+      } else {
+        modeWaterBtn.className = 'px-2.5 py-1 rounded-lg bg-white text-stone-900 shadow-sm font-semibold transition';
+        modeDoseBtn.className = 'px-2.5 py-1 rounded-lg text-stone-500 hover:text-stone-800 transition';
+        waterWrap.className = 'p-3.5 rounded-xl bg-amber-50/60 border border-amber-800/30';
+        doseWrap.className = 'p-3.5 rounded-xl bg-stone-50 border border-stone-200/70';
+      }
+
+      // Preset buttons
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        const val = Number(btn.dataset.preset);
+        const active = state.mode === 'dose' && Math.abs(state.dose - val) < 0.01 && Math.abs(state.ratio - 14) < 0.01;
+        btn.className = active
+          ? 'preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-800 bg-amber-800 text-white transition'
+          : 'preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition';
+      });
+
+      // Roast buttons
+      document.querySelectorAll('.roast-btn').forEach(btn => {
+        const active = btn.dataset.roast === state.roast;
+        btn.className = active
+          ? 'roast-btn py-1.5 rounded-lg text-xs font-semibold border border-amber-800 bg-amber-800 text-white transition'
+          : 'roast-btn py-1.5 rounded-lg text-xs font-semibold border border-stone-200 bg-white text-stone-700 hover:bg-stone-100 transition';
+      });
+
+      // Split buttons
+      document.querySelectorAll('.split-btn').forEach(btn => {
+        const active = Number(btn.dataset.split) === state.splitCount;
+        btn.className = active
+          ? 'split-btn py-1.5 px-2 rounded-lg text-xs font-semibold border border-amber-800 bg-amber-800 text-white transition'
+          : 'split-btn py-1.5 px-2 rounded-lg text-xs font-semibold border border-stone-200 bg-white text-stone-700 hover:bg-stone-100 transition';
+      });
+
+      // Bloom buttons
+      document.querySelectorAll('.bloom-btn').forEach(btn => {
+        const active = Number(btn.dataset.bloom) === state.bloomMultiplier;
+        btn.className = active
+          ? 'bloom-btn px-2 py-0.5 rounded border border-amber-800 bg-amber-800 text-white text-[11px] font-semibold transition'
+          : 'bloom-btn px-2 py-0.5 rounded border border-stone-200 bg-white text-stone-600 text-[11px] font-semibold hover:bg-stone-100 transition';
+      });
+
+      // Steps & Visual Bar
+      const steps = buildSteps();
+      const pourSteps = steps.filter(s => s.pour > 0);
+      const totalWater = Math.max(1, Math.round(state.water));
+
+      document.getElementById('pourSummaryText').textContent = pourSteps.map(s => `${s.pour}g`).join(' + ') + ` = ${totalWater}g`;
+
+      const pourBar = document.getElementById('pourBar');
+      pourBar.innerHTML = pourSteps.map(s => {
+        const pct = ((s.pour / totalWater) * 100).toFixed(2);
+        return `<div class="${s.color} h-full transition-all duration-300" style="width:${pct}%" title="${s.title}: ${s.pour}g"></div>`;
+      }).join('');
+
+      // Active step calculation
+      let activeStepIdx = -1;
+      if (state.timerRunning || state.elapsedSec > 0) {
+        activeStepIdx = steps.findIndex(s => state.elapsedSec >= s.startSec && state.elapsedSec < s.endSec);
+        if (activeStepIdx === -1 && state.elapsedSec >= steps[steps.length - 1].endSec) {
+          activeStepIdx = steps.length - 1;
+        }
+      }
+
+      const stepsContainer = document.getElementById('stepsContainer');
+      stepsContainer.innerHTML = steps.map((step, idx) => {
+        const isActive = idx === activeStepIdx;
+        const isDone = activeStepIdx > idx;
+        const cardStyle = isActive
+          ? 'border-amber-700 bg-amber-50/70 ring-2 ring-amber-700/20'
+          : (isDone ? 'border-stone-200 bg-stone-50/60 opacity-75' : 'border-stone-200 bg-white');
+        const badgeStyle = isActive
+          ? 'bg-amber-800 text-white animate-pulse-soft'
+          : (isDone ? 'bg-emerald-600 text-white' : 'bg-stone-100 text-stone-700');
+
+        const timeWindow = `${formatTime(step.startSec)} ~ ${formatTime(step.endSec)}`;
+        const pourBadge = step.pour > 0
+          ? `<span class="px-2 py-0.5 rounded-md bg-amber-900/10 text-amber-900 font-bold text-xs tabular-nums">+${step.pour}g</span>
+             <span class="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-semibold text-xs tabular-nums">누적 ${step.cumulative}g</span>`
+          : `<span class="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-semibold text-xs tabular-nums">총 ${step.cumulative}g</span>`;
+
+        return `
+          <div class="rounded-xl p-3.5 border transition ${cardStyle}">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${badgeStyle}">${idx + 1}</span>
+                <span class="font-bold text-sm text-stone-900">${step.title}</span>
+                <span class="text-xs font-medium text-stone-400 tabular-nums">${timeWindow}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                ${pourBadge}
+              </div>
+            </div>
+            <p class="text-xs sm:text-sm text-stone-600 pl-8">${step.desc}</p>
+          </div>
+        `;
+      }).join('');
+
+      // Timer UI
+      document.getElementById('timerDisplay').textContent = formatTime(state.elapsedSec);
+      const startBtn = document.getElementById('timerStartBtn');
+      startBtn.textContent = state.timerRunning ? '일시정지' : (state.elapsedSec > 0 ? '계속' : '시작');
+
+      const hintEl = document.getElementById('timerStepHint');
+      if (activeStepIdx >= 0) {
+        const cur = steps[activeStepIdx];
+        hintEl.textContent = `진행 중: ${cur.title} (목표 누적 ${cur.cumulative}g)`;
+      } else {
+        hintEl.textContent = '시작 버튼을 누르면 각 푸어 시점에 맞춰 안내합니다.';
+      }
+    }
+
+    function toggleTimer() {
+      if (state.timerRunning) {
+        clearInterval(state.timerInterval);
+        state.timerRunning = false;
+        render();
+        return;
+      }
+      state.timerRunning = true;
+      playChime();
+      state.timerInterval = setInterval(() => {
+        state.elapsedSec += 1;
+        const steps = buildSteps();
+        const curIdx = steps.findIndex(s => state.elapsedSec >= s.startSec && state.elapsedSec < s.endSec);
+        if (curIdx !== -1 && curIdx !== state.lastCueStepIndex) {
+          state.lastCueStepIndex = curIdx;
+          if (state.elapsedSec > 0) playChime();
+        }
+        render();
+      }, 1000);
+      render();
+    }
+
+    function resetTimer() {
+      clearInterval(state.timerInterval);
+      state.timerRunning = false;
+      state.elapsedSec = 0;
+      state.lastCueStepIndex = -1;
+      render();
+    }
+
+    function copyRecipe() {
+      const grind = getRecommendedGrind();
+      const grindText = grind.min === grind.max ? `${grind.min}단계` : `${grind.min}~${grind.max}단계`;
+      const steps = buildSteps();
+      const lines = [
+        `[V60 Neo 02 · 리큅 LCG-C2400 드립 레시피]`,
+        `- 원두: ${state.dose}g (${ROAST_META[state.roast].label})`,
+        `- 물 총량: ${Math.round(state.water)}g (비율 1:${state.ratio})`,
+        `- 분쇄도: ${grindText} / 물 온도: ${ROAST_META[state.roast].temp}°C`,
+        ``,
+        `[단계별 추출]`
+      ];
+      steps.forEach((s, i) => {
+        const pourPart = s.pour > 0 ? `+${s.pour}g (누적 ${s.cumulative}g)` : `완료 (총 ${s.cumulative}g)`;
+        lines.push(`${i + 1}. ${s.title} [${formatTime(s.startSec)}~${formatTime(s.endSec)}] : ${pourPart}`);
+      });
+      const text = lines.join('\n');
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('레시피가 클립보드에 복사되었습니다.');
+        }).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('레시피가 클립보드에 복사되었습니다.');
+      } catch (e) {
+        showToast('복사에 실패했습니다.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    // Event Listeners
+    document.getElementById('modeDoseBtn').addEventListener('click', () => {
+      state.mode = 'dose';
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('modeWaterBtn').addEventListener('click', () => {
+      state.mode = 'water';
+      syncDerivedValues();
+      render();
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.mode = 'dose';
+        state.ratio = 14;
+        state.dose = Number(btn.dataset.preset);
+        syncDerivedValues();
+        render();
+      });
+    });
+
+    document.getElementById('doseInput').addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (isNaN(v) || v <= 0) return;
+      state.mode = 'dose';
+      state.dose = Math.min(40, Math.max(8, v));
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('doseRange').addEventListener('input', e => {
+      state.mode = 'dose';
+      state.dose = parseFloat(e.target.value);
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('doseMinus').addEventListener('click', () => {
+      state.mode = 'dose';
+      state.dose = Math.max(8, Math.round((state.dose - 1) * 2) / 2);
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('dosePlus').addEventListener('click', () => {
+      state.mode = 'dose';
+      state.dose = Math.min(40, Math.round((state.dose + 1) * 2) / 2);
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('waterInput').addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (isNaN(v) || v <= 0) return;
+      state.mode = 'water';
+      state.water = Math.min(600, Math.max(100, v));
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('waterRange').addEventListener('input', e => {
+      state.mode = 'water';
+      state.water = parseFloat(e.target.value);
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('waterMinus').addEventListener('click', () => {
+      state.mode = 'water';
+      state.water = Math.max(100, Math.round(state.water - 10));
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('waterPlus').addEventListener('click', () => {
+      state.mode = 'water';
+      state.water = Math.min(600, Math.round(state.water + 10));
+      syncDerivedValues();
+      render();
+    });
+
+    document.getElementById('ratioRange').addEventListener('input', e => {
+      state.ratio = parseFloat(e.target.value);
+      syncDerivedValues();
+      render();
+    });
+
+    document.querySelectorAll('.roast-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.roast = btn.dataset.roast;
+        render();
+      });
+    });
+
+    document.getElementById('grindMinus').addEventListener('click', () => {
+      state.manualGrindOffset = Math.max(-2, state.manualGrindOffset - 1);
+      render();
+    });
+
+    document.getElementById('grindPlus').addEventListener('click', () => {
+      state.manualGrindOffset = Math.min(2, state.manualGrindOffset + 1);
+      render();
+    });
+
+    document.querySelectorAll('.split-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.splitCount = Number(btn.dataset.split);
+        render();
+      });
+    });
+
+    document.querySelectorAll('.bloom-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.bloomMultiplier = Number(btn.dataset.bloom);
+        render();
+      });
+    });
+
+    document.getElementById('timerStartBtn').addEventListener('click', toggleTimer);
+    document.getElementById('timerResetBtn').addEventListener('click', resetTimer);
+
+    document.getElementById('soundToggleBtn').addEventListener('click', () => {
+      state.soundEnabled = !state.soundEnabled;
+      document.getElementById('soundOnIcon').classList.toggle('hidden', !state.soundEnabled);
+      document.getElementById('soundOffIcon').classList.toggle('hidden', state.soundEnabled);
+      showToast(state.soundEnabled ? '알림음이 켜졌습니다.' : '알림음이 꺼졌습니다.');
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', copyRecipe);
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      resetTimer();
+      state.mode = 'dose';
+      state.dose = 20;
+      state.ratio = 14;
+      state.roast = 'medium';
+      state.manualGrindOffset = 0;
+      state.splitCount = 2;
+      state.bloomMultiplier = 2;
+      syncDerivedValues();
+      render();
+      showToast('기본 설정(20g / 1:14)으로 초기화했습니다.');
+    });
+
+    // Initial render
+    syncDerivedValues();
+    render();
+  </script>
+</body>
+</html>
